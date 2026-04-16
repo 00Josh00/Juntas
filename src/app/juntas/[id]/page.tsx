@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
-import { CalendarDays, Settings, Play, CheckCircle2, XCircle, Users, AlertCircle } from 'lucide-react'
+import { CalendarDays, Settings, Play, CheckCircle2, XCircle, Users, AlertCircle, Wallet } from 'lucide-react'
 import { Junta, Participante, OpcionParticipante, SemanaJunta } from '@/types/database'
 import { AccionesConfiguracion } from '@/app/juntas/[id]/AccionesConfiguracion'
 import { SemanasCarousel } from '@/app/juntas/[id]/SemanasCarousel'
