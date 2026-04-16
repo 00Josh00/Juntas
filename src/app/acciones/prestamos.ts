@@ -45,5 +45,4 @@ export async function registrarCuota(cuotaId: number, montoPagado: number) {
   if (error) console.error('Error pagando cuota:', error)
 
   revalidatePath('/prestamos')
-  return { success: true }
 }

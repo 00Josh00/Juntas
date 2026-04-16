@@ -10,11 +10,10 @@ export async function generarPagos(semanaId: number, juntaId: number) {
 
   if (error) {
     console.error('Error generando pagos:', error)
-    return { error: 'No se pudieron generar los pagos.' }
+    return
   }
 
   revalidatePath(`/juntas/${juntaId}/semanas/${semanaId}`)
-  return { success: true }
 }
 
 export async function registrarPago(pagoId: number, montoEsperado: number, juntaId: number, semanaId: number) {
@@ -31,11 +30,10 @@ export async function registrarPago(pagoId: number, montoEsperado: number, junta
 
   if (error) {
     console.error('Error registrando pago:', error)
-    return { error: 'Error al registrar el pago.' }
+    return
   }
 
   revalidatePath(`/juntas/${juntaId}/semanas/${semanaId}`)
-  return { success: true }
 }
 
 export async function revertirPago(pagoId: number, juntaId: number, semanaId: number) {
@@ -52,9 +50,8 @@ export async function revertirPago(pagoId: number, juntaId: number, semanaId: nu
 
   if (error) {
     console.error('Error revirtiendo pago:', error)
-    return { error: 'Error al revertir.' }
+    return
   }
 
   revalidatePath(`/juntas/${juntaId}/semanas/${semanaId}`)
-  return { success: true }
 }

@@ -14,7 +14,7 @@ export async function activarJunta(juntaId: number) {
 
   if (errorUpdate) {
     console.error('Error al activar junta:', errorUpdate)
-    return { error: 'No se pudo activar la junta.' }
+    return
   }
 
   // 2. Generar semanas llamando a la función RPC de la BD
@@ -22,12 +22,11 @@ export async function activarJunta(juntaId: number) {
 
   if (errorRpc) {
     console.error('Error al generar semanas:', errorRpc)
-    return { error: 'La junta se activó, pero hubo un error al generar las semanas.' }
+    return
   }
 
   revalidatePath(`/juntas/${juntaId}`)
   revalidatePath('/juntas')
-  return { success: true }
 }
 
 export async function agregarParticipanteAJunta(formData: FormData) {
@@ -46,11 +45,10 @@ export async function agregarParticipanteAJunta(formData: FormData) {
 
   if (error) {
     console.error('Error al agregar participante a la junta:', error)
-    return { error: 'Ese participante probablemente ya está en esta junta.' }
+    return
   }
 
   revalidatePath(`/juntas/${junta_id}`)
-  return { success: true }
 }
 
 export async function removerParticipanteDeJunta(juntaId: number, participanteId: number) {
