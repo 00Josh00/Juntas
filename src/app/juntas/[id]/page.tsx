@@ -115,13 +115,62 @@ export default async function DetalleJuntaPage({ params }: { params: Promise<{ i
       )}
 
       {junta.estado === 'activa' && (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-border shadow-sm">
-           <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <CalendarDays className="text-primary" />
-            Progreso Semanal
-          </h2>
+        <div className="space-y-6 sm:space-y-8">
           
-          <SemanasCarousel semanas={semanas} juntaId={juntaId} />
+          {/* CAZADOR DE SEMANA Y CAJA (DASHBOARD) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             {/* CAJA ACTUAL */}
+             <div className="bg-gradient-to-br from-blue-900 to-indigo-900 text-white rounded-3xl p-6 sm:p-8 shadow-lg flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-6 opacity-10">
+                   <AlertCircle className="h-24 w-24" />
+                </div>
+                <div>
+                   <h3 className="text-blue-200 font-semibold uppercase tracking-widest text-xs mb-1">Caja en Efectivo</h3>
+                   <div className="text-4xl sm:text-5xl font-extrabold mb-4 border-b border-blue-800/50 pb-4 inline-block">
+                     S/ {(
+                        (await supabase.from('pagos_semanales').select('monto_pagado, semanas_junta!inner(junta_id)').eq('semanas_junta.junta_id', juntaId).eq('estado', 'pagado')).data?.reduce((a, b) => a + Number(b.monto_pagado), 0) || 0
+                     ) - (
+                       (await supabase.from('prestamos').select('monto_principal').eq('junta_id', juntaId)).data?.reduce((a, b) => a + Number(b.monto_principal), 0) || 0
+                     ) + (
+                       (await supabase.from('pagos_cuotas').select('monto_pagado, prestamos!inner(junta_id)').eq('prestamos.junta_id', juntaId)).data?.reduce((a, b) => a + Number(b.monto_pagado), 0) || 0
+                     )}.00
+                   </div>
+                   <div className="text-sm font-medium text-blue-100/80">Recaudado menos préstamos activos + recupero.</div>
+                </div>
+             </div>
+
+             {/* SEMANA ACTUAL */}
+             {(() => {
+                const semanaActual = semanas.find(s => !s.cerrada) || semanas[semanas.length - 1];
+                return semanaActual ? (
+                  <div className="bg-white dark:bg-slate-900 border border-border rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between">
+                     <div>
+                        <h3 className="text-muted-foreground font-semibold uppercase tracking-widest text-xs mb-1">Punto de Control</h3>
+                        <div className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">
+                          Semana {semanaActual.numero_semana}
+                        </div>
+                        <p className="text-secondary text-sm mb-6 max-w-sm">
+                          Esta es la semana en curso basada en tu progreso manual de recaudación.
+                        </p>
+                     </div>
+                     <div className="flex flex-wrap gap-3">
+                        <Link href={`/juntas/${juntaId}/semanas/${semanaActual.id}`} className="px-5 py-3 bg-primary text-white font-medium rounded-xl hover:bg-blue-700 transition flex items-center gap-2">
+                           Administrar Semana Actual &rarr;
+                        </Link>
+                     </div>
+                  </div>
+                ) : null;
+             })()}
+          </div>
+
+          {/* LISTA DE SEMANAS */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-8 border border-border shadow-sm">
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+              <CalendarDays className="text-primary" />
+              Progreso General
+            </h2>
+            <SemanasCarousel semanas={semanas} juntaId={juntaId} />
+          </div>
         </div>
       )}
 

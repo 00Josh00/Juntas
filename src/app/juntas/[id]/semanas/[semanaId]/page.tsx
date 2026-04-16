@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { Wallet, Settings2, PlayCircle, Loader2 } from 'lucide-react'
 import { SemanaJunta, PagoSemanal, Junta } from '@/types/database'
 import { BotonManejarPago } from './BotonesPago'
-import { generarPagos } from '@/app/acciones/pagos'
+import { generarPagos, toggleCerrarSemana } from '@/app/acciones/pagos'
 
 export default async function SemanaPage({ params }: { params: Promise<{ id: string, semanaId: string }> }) {
   const { id: juntaIdStr, semanaId: semanaIdStr } = await params
@@ -38,6 +38,11 @@ export default async function SemanaPage({ params }: { params: Promise<{ id: str
   const handleGenerarCaja = async () => {
     'use server'
     await generarPagos(semanaId, juntaId)
+  }
+  
+  const handleToggleEstadoSemana = async () => {
+    'use server'
+    await toggleCerrarSemana(semanaId, semana.cerrada, juntaId)
   }
 
   // Navegación rápida entre semanas
@@ -114,10 +119,50 @@ export default async function SemanaPage({ params }: { params: Promise<{ id: str
         </div>
       ) : (
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-border shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-border bg-muted/20">
+          <div className="p-6 border-b border-border bg-muted/20 flex justify-between items-center flex-wrap gap-4">
             <h2 className="text-lg font-bold">Control de Recaudación</h2>
+            <form action={handleToggleEstadoSemana}>
+               <button 
+                  className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors border ${semana.cerrada ? 'bg-muted text-foreground border-border hover:bg-muted/80' : 'bg-green-600 text-white border-green-700 hover:bg-green-700'}`}
+               >
+                  {semana.cerrada ? 'Reabrir Semana' : 'Cerrar Semana Oficialmente'}
+               </button>
+            </form>
           </div>
-          <div className="overflow-x-auto">
+          <div className="md:hidden divide-y divide-border">
+            {pagos.map(pago => (
+              <div key={`mob-${pago.id}`} className={`p-5 transition-colors ${pago.estado === 'pagado' ? 'bg-green-50/50 dark:bg-green-900/10' : 'hover:bg-muted/10'}`}>
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                     <div className="font-bold text-base text-foreground leading-tight">{pago.participantes?.nombre} {pago.participantes?.apellido}</div>
+                     <div className="text-xs text-secondary font-medium mt-1">Opciones tomadas: {pago.opciones_cantidad}</div>
+                  </div>
+                  <div>
+                    {pago.estado === 'pagado' ? (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                        PAGADO
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">
+                        PENDIENTE
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-between items-end gap-4 bg-background p-3 rounded-xl border border-border/50">
+                  <div>
+                    <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Monto Sugerido</div>
+                    <div className="font-extrabold text-xl text-primary">S/ {Number(pago.monto_esperado).toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <BotonManejarPago pagoId={pago.id} montoEsperado={pago.monto_esperado} estado={pago.estado} juntaId={juntaId} semanaId={semanaId} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                  <tr className="bg-muted/50 border-b border-border text-sm font-semibold text-muted-foreground">

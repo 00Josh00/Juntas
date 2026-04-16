@@ -55,3 +55,20 @@ export async function revertirPago(pagoId: number, juntaId: number, semanaId: nu
 
   revalidatePath(`/juntas/${juntaId}/semanas/${semanaId}`)
 }
+
+export async function toggleCerrarSemana(semanaId: number, currentEstado: boolean, juntaId: number) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('semanas_junta')
+    .update({ cerrada: !currentEstado })
+    .eq('id', semanaId)
+
+  if (error) {
+    console.error('Error actualizando semana:', error)
+    return
+  }
+
+  revalidatePath(`/juntas/${juntaId}`)
+  revalidatePath(`/juntas/${juntaId}/semanas/${semanaId}`)
+}
