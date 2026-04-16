@@ -29,65 +29,70 @@ export function AccionesConfiguracion({
   return (
     <div className="space-y-6">
       {/* SECCIÓN DE PARTICIPANTES (CONFIGURACIÓN) */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-border shadow-sm">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="text-primary" />
-            Integrantes de la Junta
-          </h2>
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-border shadow-premium">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h2 className="text-2xl font-black flex items-center gap-2 text-foreground">
+              <Users className="text-primary h-6 w-6" />
+              Configurar Integrantes
+            </h2>
+            <p className="text-slate-500 text-sm font-medium mt-1">Suma personas a este grupo para iniciar la junta.</p>
+          </div>
           {opciones.length >= 2 && (
             <button
               onClick={handleActivar}
               disabled={isActivating}
-              className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-transform hover:scale-105 active:scale-95 disabled:opacity-70 disabled:hover:scale-100 flex items-center gap-2"
+              className="w-full sm:w-auto px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-premium flex items-center justify-center gap-2"
             >
               {isActivating ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5" />}
-              ¡Iniciar Junta!
+              ¡INICIAR JUNTA!
             </button>
           )}
         </div>
 
         {opciones.length === 0 && (
-          <div className="p-4 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-xl mb-8">
-            Debes agregar al menos a dos participantes para poder activar y comenzar la junta.
+          <div className="p-4 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-2xl mb-8 font-bold text-sm">
+            Nota: Debes agregar al menos a dos personas para poder activar este grupo.
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* TABLA DE PARTICIPANTES AGREGADOS */}
-          <div className="lg:col-span-2 order-2 lg:order-1">
-            <div className="border border-border rounded-2xl overflow-hidden">
+          <div className="flex-1 order-2 lg:order-1">
+            <div className="border border-slate-100 rounded-2xl overflow-hidden bg-white">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-muted/50 border-b border-border">
-                    <th className="p-4 font-semibold text-muted-foreground">Participante</th>
-                    <th className="p-4 font-semibold text-muted-foreground text-center">Opciones (Cupos)</th>
-                    <th className="p-4 font-semibold text-muted-foreground text-center">Acción</th>
+                  <tr className="bg-slate-50 border-b border-slate-100">
+                    <th className="p-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">Participante</th>
+                    <th className="p-4 font-black text-[10px] text-slate-400 uppercase tracking-widest text-center">Opciones</th>
+                    <th className="p-4 font-black text-[10px] text-slate-400 uppercase tracking-widest text-center">Quitar</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y divide-slate-50">
                   {opciones.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="p-8 text-center text-muted-foreground italic">
-                        No hay participantes agregados todavía.
+                      <td colSpan={3} className="p-10 text-center text-slate-400 italic text-sm">
+                        Sin participantes todavía.
                       </td>
                     </tr>
                   ) : (
                     opciones.map((opc) => (
-                      <tr key={opc.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="p-4 font-medium text-foreground">
+                      <tr key={opc.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="p-4 font-bold text-sm text-foreground">
                           {opc.participantes?.nombre} {opc.participantes?.apellido}
                         </td>
-                        <td className="p-4 text-center font-bold text-lg">
-                          {opc.cantidad_opciones}
+                        <td className="p-4 text-center">
+                           <span className="bg-indigo-50 text-indigo-700 font-black px-3 py-1 rounded-lg text-sm">
+                            {opc.cantidad_opciones}
+                           </span>
                         </td>
                         <td className="p-4 text-center">
                           <button
                             onClick={() => removerParticipanteDeJunta(juntaId, opc.participante_id)}
-                            className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                            title="Quitar participante"
+                            className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all active:scale-90"
+                            title="Quitar integrante"
                           >
-                            <Trash2 className="h-5 w-5" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </td>
                       </tr>
@@ -99,41 +104,41 @@ export function AccionesConfiguracion({
           </div>
 
           {/* FORMULARIO PARA AGREGAR PARTICIPANTE */}
-          <div className="lg:col-span-1 order-1 lg:order-2">
-            <div className="bg-muted/30 border border-border p-6 rounded-2xl">
-              <h3 className="font-bold text-lg mb-4">Agregar Participante</h3>
-              <form action={agregarParticipanteAJunta} className="space-y-4">
+          <div className="w-full lg:w-80 order-1 lg:order-2">
+            <div className="bg-slate-50 border border-slate-100 p-6 rounded-3xl">
+              <h3 className="font-black text-xs uppercase tracking-widest text-slate-500 mb-6">Nuevo Integrante</h3>
+              <form action={agregarParticipanteAJunta} className="space-y-5">
                 <input type="hidden" name="junta_id" value={juntaId} />
                 
-                <div>
-                  <label className="text-sm font-semibold block mb-1">Seleccionar Persona</label>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase text-slate-400 tracking-tight">Persona</label>
                   <select 
                     name="participante_id" 
                     required
-                    className="w-full px-4 py-3 rounded-xl border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                   >
-                    <option value="">-- Elige un participante --</option>
+                    <option value="">-- Seleccionar --</option>
                     {participantesDisponibles.map(p => (
                       <option key={p.id} value={p.id}>{p.nombre} {p.apellido}</option>
                     ))}
                   </select>
                 </div>
 
-                <div>
-                  <label className="text-sm font-semibold block mb-1">Cantidad de Opciones</label>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase text-slate-400 tracking-tight">Cantidad Opciones</label>
                   <input 
                     type="number" 
                     name="cantidad_opciones"
                     min="1"
                     defaultValue="1"
                     required
-                    className="w-full px-4 py-3 rounded-xl border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">1 opción = pago normal semanal</p>
+                  <p className="text-[10px] text-slate-400 font-medium">1 opción = monto base semanal</p>
                 </div>
 
-                <SubmitButton className="w-full mt-2">
-                  <Plus className="h-4 w-4" /> Agregar
+                <SubmitButton className="w-full mt-4 bg-indigo-600 text-white rounded-2xl font-black text-xs py-3.5 shadow-premium">
+                  <Plus className="h-4 w-4" /> AGREGAR A LISTA
                 </SubmitButton>
               </form>
             </div>

@@ -14,19 +14,64 @@ export async function activarJunta(juntaId: number) {
 
   if (errorUpdate) {
     console.error('Error al activar junta:', errorUpdate)
-    return
+    return { error: 'No se pudo activar la junta' }
   }
 
   // 2. Generar semanas llamando a la función RPC de la BD
-  const { error: errorRpc } = await supabase.rpc('generar_semanas_junta', { p_junta_id: juntaId })
+  const { error: errorRpcSem } = await supabase.rpc('generar_semanas_junta', { p_junta_id: juntaId })
+  if (errorRpcSem) {
+    console.error('Error al generar semanas:', errorRpcSem)
+    return { error: 'Error generando cronograma' }
+  }
 
-  if (errorRpc) {
-    console.error('Error al generar semanas:', errorRpc)
-    return
+  // 3. GENERAR TODOS LOS PAGOS AUTOMÁTICAMENTE (NUEVA REGLA)
+  // Obtenemos las semanas creadas
+  const { data: semanas } = await supabase
+    .from('semanas_junta')
+    .select('id')
+    .eq('junta_id', juntaId)
+  
+  // Obtenemos los participantes y sus opciones
+  const { data: opciones } = await supabase
+    .from('opciones_participante')
+    .select('participante_id, cantidad_opciones')
+    .eq('junta_id', juntaId)
+    .eq('activo', true)
+  
+  // Obtenemos el monto por opcion de la junta
+  const { data: junta } = await supabase
+    .from('juntas')
+    .select('monto_por_opcion')
+    .eq('id', juntaId)
+    .single()
+
+  if (semanas && opciones && junta) {
+    const pagosToInsert = []
+    for (const semana of semanas) {
+      for (const op of opciones) {
+        pagosToInsert.push({
+          semana_junta_id: semana.id,
+          participante_id: op.participante_id,
+          opciones_cantidad: op.cantidad_opciones,
+          monto_esperado: op.cantidad_opciones * Number(junta.monto_por_opcion),
+          estado: 'pendiente'
+        })
+      }
+    }
+
+    // Insertar en masa (Supabase insert acepta array)
+    const { error: errorPagos } = await supabase
+      .from('pagos_semanales')
+      .insert(pagosToInsert)
+    
+    if (errorPagos) {
+      console.error('Error pre-generando pagos:', errorPagos)
+    }
   }
 
   revalidatePath(`/juntas/${juntaId}`)
   revalidatePath('/juntas')
+  return { success: true }
 }
 
 export async function agregarParticipanteAJunta(formData: FormData) {

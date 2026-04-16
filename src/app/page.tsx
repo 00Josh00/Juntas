@@ -35,33 +35,33 @@ export default async function Home() {
   };
 
   const estadoStyle = (estado: string) => {
-    if (estado === 'activa') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300';
-    if (estado === 'configuracion') return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
-    return 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300';
+    if (estado === 'activa') return 'bg-indigo-50 text-indigo-700 border-indigo-100 border';
+    if (estado === 'configuracion') return 'bg-slate-50 text-slate-500 border-slate-200 border';
+    return 'bg-emerald-50 text-emerald-700 border-emerald-100 border';
   };
 
   return (
     <div className="min-h-screen bg-background pb-24">
 
       {/* HEADER */}
-      <div className="px-4 pt-8 pb-6 bg-gradient-to-b from-blue-950 to-blue-900 text-white">
-        <p className="text-blue-300 text-xs font-semibold uppercase tracking-widest mb-1">Panel Principal</p>
-        <h1 className="text-2xl font-extrabold tracking-tight mb-1">Mis Juntas de Dinero</h1>
-        <p className="text-blue-200/70 text-sm">Gestiona tus grupos, pagos y préstamos</p>
+      <div className="px-4 pt-8 pb-10 bg-[#0f172a] text-white">
+        <p className="text-indigo-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-2 px-1">Sistema de Ahorros</p>
+        <h1 className="text-3xl font-black tracking-tight mb-2">Mis Juntas</h1>
+        <p className="text-slate-400 text-sm font-medium">Control fácil de tus ahorros y préstamos</p>
 
         {/* Resumen rápido */}
-        <div className="grid grid-cols-3 gap-2 mt-5">
-          <div className="bg-white/10 rounded-xl p-3 text-center">
-            <p className="text-2xl font-extrabold">{juntas.length}</p>
-            <p className="text-blue-200 text-[10px] uppercase font-semibold mt-0.5">Grupos</p>
+        <div className="grid grid-cols-3 gap-3 mt-6">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+            <p className="text-2xl font-black leading-none">{juntas.length}</p>
+            <p className="text-slate-500 text-[9px] uppercase font-bold mt-2 tracking-widest">Grupos</p>
           </div>
-          <div className="bg-white/10 rounded-xl p-3 text-center">
-            <p className="text-2xl font-extrabold">{juntasActivas}</p>
-            <p className="text-blue-200 text-[10px] uppercase font-semibold mt-0.5">Activos</p>
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+            <p className="text-2xl font-black leading-none text-indigo-400">{juntasActivas}</p>
+            <p className="text-slate-500 text-[9px] uppercase font-bold mt-2 tracking-widest">Activas</p>
           </div>
-          <div className="bg-white/10 rounded-xl p-3 text-center">
-            <p className="text-2xl font-extrabold">{totalParticipantes ?? 0}</p>
-            <p className="text-blue-200 text-[10px] uppercase font-semibold mt-0.5">Personas</p>
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+            <p className="text-2xl font-black leading-none">{totalParticipantes ?? 0}</p>
+            <p className="text-slate-500 text-[9px] uppercase font-bold mt-2 tracking-widest">Socios</p>
           </div>
         </div>
       </div>
@@ -92,21 +92,21 @@ export default async function Home() {
               </Link>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {juntas.map((j) => (
                 <Link href={`/juntas/${j.id}`} key={j.id} className="block">
-                  <div className="bg-white dark:bg-slate-900 border border-border rounded-2xl p-4 hover:border-primary hover:shadow-sm transition-all active:scale-[0.99]">
+                  <div className="bg-white border border-border rounded-2xl p-5 hover:border-indigo-400 shadow-premium transition-all active:scale-[0.99] group">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${estadoStyle(j.estado)}`}>
                             {estadoIcon(j.estado)}
-                            {j.estado === 'configuracion' ? 'Config' : j.estado}
+                            {j.estado === 'configuracion' ? 'Organizando' : (j.estado === 'activa' ? 'En marcha' : 'Terminado')}
                           </span>
                         </div>
                         <h3 className="font-bold text-foreground text-base leading-tight truncate">{j.nombre}</h3>
                         <div className="flex items-center gap-3 mt-2">
-                          <span className="text-xs text-muted-foreground">S/ {Number(j.monto_por_opcion).toFixed(2)}/opción</span>
+                          <span className="text-xs text-muted-foreground">{Number(j.monto_por_opcion).toFixed(2)} / opción</span>
                           <span className="text-xs text-muted-foreground">·</span>
                           <span className="text-xs text-muted-foreground">{j.total_semanas} sem</span>
                         </div>
@@ -120,67 +120,36 @@ export default async function Home() {
           )}
         </section>
 
-        {/* PARTICIPANTES */}
+        {/* SOCIOS */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-foreground text-base flex items-center gap-2">
-              <Users className="h-4 w-4 text-secondary" />
-              Participantes
+            <h2 className="font-bold text-foreground text-sm flex items-center gap-2 uppercase tracking-widest text-[10px]">
+              Nuestros Socios
             </h2>
-            <Link href="/participantes" className="text-xs font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors">
-              Ver todos ({totalParticipantes ?? 0})
-            </Link>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-border rounded-2xl overflow-hidden">
-            {participantes.length === 0 ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">
-                No hay personas registradas todavía.
+          <Link href="/participantes" className="block">
+            <div className="bg-white border border-border rounded-2xl p-5 flex items-center justify-between hover:border-indigo-400 shadow-premium transition-all active:scale-[0.99] group">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Users className="h-6 w-6 text-emerald-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-black text-foreground text-base">Socios Registrados</p>
+                  <p className="text-[11px] text-slate-500 font-medium">{totalParticipantes ?? 0} socios en el sistema</p>
+                </div>
               </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {participantes.map((p) => (
-                  <div key={p.id} className="px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-primary text-xs font-bold">
-                          {p.nombre.charAt(0)}{p.apellido.charAt(0)}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm text-foreground">{p.nombre} {p.apellido}</p>
-                        {p.telefono && <p className="text-xs text-muted-foreground">{p.telefono}</p>}
-                      </div>
-                    </div>
-                    <Activity className="h-4 w-4 text-muted-foreground/30 flex-shrink-0" />
-                  </div>
-                ))}
+              <div className="flex items-center gap-2 text-indigo-600 font-bold text-xs">
+                Ver lista
+                <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-indigo-500 transition-colors" />
               </div>
-            )}
-            <div className="p-4 bg-muted/30 border-t border-border">
-              <Link
-                href="/participantes/nuevo"
-                className="w-full block text-center py-2.5 bg-white dark:bg-slate-800 border border-border hover:border-primary text-foreground font-semibold rounded-xl transition text-sm"
-              >
-                + Registrar Persona Nueva
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* ACCESO RAPIDO A PRESTAMOS */}
-        <section>
-          <Link href="/prestamos" className="block">
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-700 text-white rounded-2xl p-5 flex items-center justify-between">
-              <div>
-                <p className="text-indigo-200 text-xs font-semibold uppercase tracking-wider mb-1">Panel Global</p>
-                <p className="font-bold text-base">Estado de Préstamos →</p>
-                <p className="text-indigo-200/80 text-xs mt-1">Ver cuotas, saldos y estado de préstamos</p>
-              </div>
-              <Wallet className="h-10 w-10 text-white/20 flex-shrink-0" />
             </div>
           </Link>
+          
+
         </section>
+
+
 
       </div>
     </div>

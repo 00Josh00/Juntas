@@ -19,44 +19,38 @@
 }
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --primary: #3b82f6;
+  /* Paleta Profesional de Alta Gama (Indigo & Slate) */
+  --background: #fdfdfe; /* Fondo ligeramente azulado muy claro */
+  --foreground: #0f172a; /* Slate 900 */
+  --primary: #4f46e5; /* Indigo 600 - Profesional y Moderno */
   --primary-foreground: #ffffff;
-  --secondary: #475569;
-  --muted: #f1f5f9;
-  --muted-foreground: #475569;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
-  --destructive: #ef4444;
-  --destructive-foreground: #f8fafc;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #3b82f6;
-  --radius: 0.5rem;
+  --secondary: #64748b; /* Slate 500 */
+  --muted: #f1f5f9; /* Slate 100 */
+  --muted-foreground: #475569; /* Slate 600 */
+  --accent: #e0e7ff; /* Indigo 100 */
+  --accent-foreground: #4338ca; /* Indigo 700 */
+  --destructive: #dc2626; /* Red 600 */
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0; /* Slate 200 */
+  --input: #f8fafc; /* Slate 50 */
+  --ring: #6366f1; /* Indigo 500 */
+  --radius: 0.75rem; /* Bordes un poco más redondeados para look moderno */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #020617;
-    --foreground: #f8fafc;
-    --primary: #3b82f6;
-    --primary-foreground: #ffffff;
-    --secondary: #cbd5e1;
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
-    --accent: #1e293b;
-    --accent-foreground: #f8fafc;
-    --destructive: #7f1d1d;
-    --destructive-foreground: #f8fafc;
-    --border: #1e293b;
-    --input: #1e293b;
-    --ring: #3b82f6;
-  }
-}
+/* Se elimina el bloque @media (prefers-color-scheme: dark) para forzar modo claro */
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Clases de utilidad para sombras sutiles y premium */
+.shadow-premium {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.card-gradient {
+  background: linear-gradient(to bottom right, #ffffff, #f8fafc);
 }

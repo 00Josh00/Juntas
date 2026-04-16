@@ -72,3 +72,44 @@ export async function toggleCerrarSemana(semanaId: number, currentEstado: boolea
   revalidatePath(`/juntas/${juntaId}`)
   revalidatePath(`/juntas/${juntaId}/semanas/${semanaId}`)
 }
+
+export async function marcarTodoComoPagado(semanaId: number, juntaId: number) {
+  const supabase = await createClient()
+
+  const { data: pendientes } = await supabase
+    .from('pagos_semanales')
+    .select('id, monto_esperado')
+    .eq('semana_junta_id', semanaId)
+    .eq('estado', 'pendiente')
+
+  if (pendientes && pendientes.length > 0) {
+    const today = new Date().toISOString().split('T')[0]
+    for (const p of pendientes) {
+      await supabase
+        .from('pagos_semanales')
+        .update({ 
+          estado: 'pagado', 
+          monto_pagado: p.monto_esperado, 
+          fecha_pago: today 
+        })
+        .eq('id', p.id)
+    }
+  }
+
+  revalidatePath(`/juntas/${juntaId}/semanas/${semanaId}`)
+}
+
+export async function marcarTodoComoPendiente(semanaId: number, juntaId: number) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('pagos_semanales')
+    .update({ 
+      estado: 'pendiente', 
+      monto_pagado: 0, 
+      fecha_pago: null 
+    })
+    .eq('semana_junta_id', semanaId)
+
+  revalidatePath(`/juntas/${juntaId}/semanas/${semanaId}`)
+}

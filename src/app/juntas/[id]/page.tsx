@@ -10,15 +10,15 @@ import { notFound } from 'next/navigation'
 const EstadoBadge = ({ estado }: { estado: string }) => {
   switch (estado) {
     case 'configuracion':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700"><Settings className="h-3 w-3" /> Config</span>
+      return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200 uppercase tracking-wider"><Settings className="h-3 w-3" /> Config</span>
     case 'activa':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800"><Play className="h-3 w-3" /> Activa</span>
+      return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wider"><Play className="h-3 w-3" /> Activa</span>
     case 'cerrada':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300 border border-green-200 dark:border-green-800"><CheckCircle2 className="h-3 w-3" /> Cerrada</span>
+      return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase tracking-wider"><CheckCircle2 className="h-3 w-3" /> Cerrada</span>
     case 'cancelada':
-      return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 border border-red-200 dark:border-red-800"><XCircle className="h-3 w-3" /> Cancelada</span>
+      return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-100 uppercase tracking-wider"><XCircle className="h-3 w-3" /> Cancelada</span>
     default:
-      return <span>{estado}</span>
+      return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200 uppercase tracking-wider">{estado}</span>
   }
 }
 
@@ -52,32 +52,60 @@ export default async function DetalleJuntaPage({ params }: { params: Promise<{ i
   const participantesDisponibles = (todosLosParticipantes || []).filter(p => !idsYaAgregados.includes(p.id))
 
   // Stats para la junta activa
-  let cajaEfectivo = 0
-  let totalPrestamos = 0
-  let totalRecuperado = 0
+  let totalAhorrosCobrados = 0
+  let totalPrincipalPrestado = 0
+  let totalCuotasCobradas = 0
+  let saldoVivoPrestamos = 0
+
   if (junta.estado === 'activa') {
+    // 1. Ahorros semanales pagados
     const { data: pagosData } = await supabase
       .from('pagos_semanales')
       .select('monto_pagado, semanas_junta!inner(junta_id)')
       .eq('semanas_junta.junta_id', juntaId)
       .eq('estado', 'pagado')
-    cajaEfectivo = pagosData?.reduce((a, b) => a + Number(b.monto_pagado), 0) || 0
+    totalAhorrosCobrados = pagosData?.reduce((a, b) => a + Number(b.monto_pagado), 0) || 0
 
+    // 2. Préstamos otorgados (Capital inicial) y Saldo Vivo
     const { data: prestamosData } = await supabase
-      .from('prestamos').select('monto_principal').eq('junta_id', juntaId)
-    totalPrestamos = prestamosData?.reduce((a, b) => a + Number(b.monto_principal), 0) || 0
+      .from('prestamos')
+      .select('monto_principal, saldo_pendiente, estado')
+      .eq('junta_id', juntaId)
+    
+    totalPrincipalPrestado = prestamosData?.reduce((a, b) => a + Number(b.monto_principal), 0) || 0
+    saldoVivoPrestamos = prestamosData?.reduce((a, b) => a + Number(b.saldo_pendiente), 0) || 0
 
+    // 3. Cuotas de préstamos cobradas
     const { data: cuotasData } = await supabase
       .from('cuotas_prestamo')
       .select('monto_pagado, prestamos!inner(junta_id)')
       .eq('prestamos.junta_id', juntaId)
       .eq('estado', 'pagada')
-    totalRecuperado = cuotasData?.reduce((a, b) => a + Number(b.monto_pagado), 0) || 0
+    totalCuotasCobradas = cuotasData?.reduce((a, b) => a + Number(b.monto_pagado), 0) || 0
   }
 
-  const cajaReal = cajaEfectivo - totalPrestamos + totalRecuperado
+  const dineroEnCaja = totalAhorrosCobrados + totalCuotasCobradas - totalPrincipalPrestado
+  const ingresosTotales = totalAhorrosCobrados + totalCuotasCobradas
+  
+  // Estadísticas detalladas de préstamos para el contador
+  const { data: prestamosCountData } = await supabase
+    .from('prestamos')
+    .select('estado')
+    .eq('junta_id', juntaId)
+  
+  const countPrestamosTotales = (prestamosCountData || []).length
+  const countPrestamosPendientes = (prestamosCountData || []).filter(p => p.estado === 'activo' || p.estado === 'pagado_parcial').length
+  const countPrestamosPagados = (prestamosCountData || []).filter(p => p.estado === 'pagado_total').length
+  
   const semanaActual = semanas.find(s => !s.cerrada) || semanas[semanas.length - 1]
   const semanasCompletadas = semanas.filter(s => s.cerrada).length
+
+  // Pagos pendientes de la semana actual
+  const { data: pagosSemanaActual } = await supabase
+    .from('pagos_semanales')
+    .select('estado')
+    .eq('semana_junta_id', semanaActual?.id || 0)
+  const pendientes = (pagosSemanaActual || []).filter(p => p.estado === 'pendiente').length
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -108,38 +136,34 @@ export default async function DetalleJuntaPage({ params }: { params: Promise<{ i
                 <div className="absolute -top-4 -right-4 opacity-10">
                   <DollarSign className="h-28 w-28" />
                 </div>
-                <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-1">Caja en Efectivo</p>
-                <p className="text-4xl font-extrabold tracking-tight">S/ {cajaReal.toFixed(2)}</p>
-                <div className="flex gap-4 mt-3 pt-3 border-t border-blue-800/40">
-                  <div>
-                    <p className="text-blue-300 text-[10px] uppercase font-bold">Cobrado</p>
-                    <p className="text-blue-100 font-bold text-sm">S/ {cajaEfectivo.toFixed(2)}</p>
+                <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-1">Dinero en Caja</p>
+                <p className="text-4xl font-extrabold tracking-tight">{dineroEnCaja.toFixed(2)}</p>
+                <div className="flex gap-4 mt-3 pt-3 border-t border-indigo-400/20">
+                  <div className="flex-1">
+                    <p className="text-indigo-200 text-[9px] uppercase font-black tracking-widest">INGRESOS (PAGOS + CUOTAS)</p>
+                    <p className="text-emerald-400 font-black text-sm">{ingresosTotales.toFixed(2)}</p>
                   </div>
-                  <div>
-                    <p className="text-blue-300 text-[10px] uppercase font-bold">Prestado</p>
-                    <p className="text-blue-100 font-bold text-sm">S/ {totalPrestamos.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-300 text-[10px] uppercase font-bold">Recuperado</p>
-                    <p className="text-blue-100 font-bold text-sm">S/ {totalRecuperado.toFixed(2)}</p>
+                  <div className="flex-1 text-right">
+                    <p className="text-indigo-200 text-[9px] uppercase font-black tracking-widest">EN PRÉSTAMOS (VIVO)</p>
+                    <p className="text-rose-400 font-black text-sm">{saldoVivoPrestamos.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
 
               {/* SEMANA ACTUAL */}
-              <div className="bg-white dark:bg-slate-900 border border-border rounded-2xl p-4">
-                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-1">Semana Actual</p>
-                <p className="text-3xl font-extrabold text-foreground">{semanaActual?.numero_semana ?? '-'}</p>
-                <p className="text-xs text-secondary mt-1">de {junta.total_semanas} totales</p>
+              <div className="bg-white border border-border rounded-2xl p-4 shadow-premium">
+                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Semana Actual</p>
+                <p className="text-3xl font-black text-foreground">{semanaActual?.numero_semana ?? '-'}</p>
+                <p className="text-[11px] text-slate-400 mt-1 font-medium italic">de {junta.total_semanas} totales</p>
               </div>
 
               {/* PROGRESO */}
-              <div className="bg-white dark:bg-slate-900 border border-border rounded-2xl p-4">
-                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-1">Semanas ✓</p>
-                <p className="text-3xl font-extrabold text-foreground">{semanasCompletadas}</p>
-                <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+              <div className="bg-white border border-border rounded-2xl p-4 shadow-premium">
+                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Semanas ✓</p>
+                <p className="text-3xl font-black text-foreground">{semanasCompletadas}</p>
+                <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-primary rounded-full transition-all"
+                    className="h-full bg-indigo-500 rounded-full transition-all"
                     style={{ width: `${Math.round((semanasCompletadas / junta.total_semanas) * 100)}%` }}
                   />
                 </div>
@@ -150,37 +174,39 @@ export default async function DetalleJuntaPage({ params }: { params: Promise<{ i
             {semanaActual && (
               <Link
                 href={`/juntas/${juntaId}/semanas/${semanaActual.id}`}
-                className="flex items-center justify-between p-4 bg-primary/10 dark:bg-primary/20 border border-primary/30 rounded-2xl hover:bg-primary/20 transition-colors"
+                className="flex items-center justify-between p-5 bg-indigo-600 text-white rounded-2xl shadow-premium hover:bg-indigo-700 transition-all active:scale-[0.98]"
               >
                 <div>
-                  <p className="text-xs font-semibold text-primary uppercase tracking-wider">En Curso</p>
-                  <p className="font-bold text-foreground text-base">Ir a Semana {semanaActual.numero_semana} →</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-1">Sesión para cobrar</p>
+                  <p className="font-black text-xl">Ir a Cobros Semana {semanaActual.numero_semana} →</p>
                 </div>
-                <CalendarDays className="h-8 w-8 text-primary flex-shrink-0" />
+                <div className="bg-white/20 p-3 rounded-xl">
+                  <CalendarDays className="h-6 w-6 text-white" />
+                </div>
               </Link>
             )}
           </>
         )}
 
         {/* INFO DE LA JUNTA */}
-        <div className="bg-white dark:bg-slate-900 border border-border rounded-2xl p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Detalles del Grupo</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-muted/50 rounded-xl p-3">
-              <p className="text-xs text-muted-foreground font-medium mb-0.5">Monto por Opción</p>
-              <p className="text-lg font-bold text-foreground">S/ {Number(junta.monto_por_opcion).toFixed(2)}</p>
+        <div className="bg-white border border-border rounded-2xl p-6 space-y-4 shadow-premium">
+          <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Datos del Grupo</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Monto por Opción</p>
+              <p className="text-xl font-black text-foreground">{Number(junta.monto_por_opcion).toFixed(2)}</p>
             </div>
-            <div className="bg-muted/50 rounded-xl p-3">
-              <p className="text-xs text-muted-foreground font-medium mb-0.5">Total Semanas</p>
-              <p className="text-lg font-bold text-foreground">{junta.total_semanas}</p>
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Total Semanas</p>
+              <p className="text-xl font-black text-foreground">{junta.total_semanas}</p>
             </div>
-            <div className="bg-primary/10 rounded-xl p-3 col-span-2">
-              <p className="text-xs text-primary font-semibold mb-0.5">{totalOpciones} opciones → Bolsa Semanal</p>
-              <p className="text-2xl font-extrabold text-primary">S/ {montoBolsaSemanal.toFixed(2)}</p>
+            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 col-span-2">
+              <p className="text-[10px] text-indigo-700 font-black uppercase tracking-[0.1em] mb-1">Bolsa Semanal Proyectada</p>
+              <p className="text-3xl font-black text-indigo-700">{montoBolsaSemanal.toFixed(2)}</p>
             </div>
           </div>
           {junta.descripcion && (
-            <p className="text-sm text-secondary border-t border-border pt-3">{junta.descripcion}</p>
+            <p className="text-sm text-slate-500 font-medium border-t border-slate-100 pt-4 leading-relaxed">{junta.descripcion}</p>
           )}
         </div>
 
@@ -196,60 +222,78 @@ export default async function DetalleJuntaPage({ params }: { params: Promise<{ i
         {/* PARTICIPANTES DEL GRUPO - CARD RESUMEN (solo activa) */}
         {junta.estado === 'activa' && opciones.length > 0 && (
           <Link href={`/juntas/${juntaId}/participantes`} className="block">
-            <div className="bg-white dark:bg-slate-900 border border-border rounded-2xl p-4 flex items-center justify-between hover:border-primary hover:shadow-sm transition-all active:scale-[0.99]">
+            <div className="bg-white border border-border rounded-2xl p-5 flex items-center justify-between hover:border-indigo-400 shadow-premium transition-all active:scale-[0.99] group">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-primary/10 rounded-2xl flex items-center justify-center flex-shrink-0">
-                  <Users className="h-6 w-6 text-primary" />
+                <div className="h-12 w-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Users className="h-6 w-6 text-indigo-600" />
                 </div>
                 <div>
-                  <p className="font-bold text-foreground text-base">{opciones.length} Integrante{opciones.length > 1 ? 's' : ''}</p>
-                  <p className="text-xs text-muted-foreground">{totalOpciones} opciones · S/ {montoBolsaSemanal.toFixed(2)}/sem</p>
+                  <p className="font-black text-foreground text-base">Nuestros Socios ({opciones.length})</p>
+                  <p className="text-[11px] text-slate-500 font-medium">{montoBolsaSemanal.toFixed(2)} ahorrado semanalmente</p>
                 </div>
               </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0" />
+              <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-indigo-500 transition-colors" />
             </div>
           </Link>
         )}
 
 
 
-        {/* SEMANAS */}
-        {junta.estado === 'activa' && semanas.length > 0 && (
-          <div className="bg-white dark:bg-slate-900 border border-border rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-border flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
-              <h2 className="font-bold text-sm text-foreground">Todas las Semanas</h2>
+        {/* ESTADO DE LA SEMANA ACTUAL */}
+        {junta.estado === 'activa' && semanaActual && (
+          <div className="bg-white border border-border rounded-2xl overflow-hidden shadow-premium">
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-slate-50">
+              <h2 className="font-black text-[10px] text-slate-400 uppercase tracking-[0.2em]">
+                Resumen Semanal
+              </h2>
+              <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${pendientes === 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                {pendientes === 0 ? '✓ Al día' : `⚠ ${pendientes} faltan`}
+              </span>
             </div>
-            <div className="p-5">
-              <SemanasCarousel semanas={semanas} juntaId={juntaId} />
+            <div className="p-6 flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-2xl font-black text-foreground">Semana {semanaActual.numero_semana}</p>
+                <p className="text-[11px] text-slate-400 font-medium mt-1">
+                  {pendientes === 0 ? 'Todos los socios han cumplido con sus aportes.' : 'Aún faltan aportaciones por registrar en esta sesión.'}
+                </p>
+              </div>
+              <Link
+                href={`/juntas/${juntaId}/semanas/${semanaActual.id}`}
+                className="bg-indigo-600 text-white p-3 rounded-xl shadow-premium hover:bg-indigo-700 transition-all active:scale-95"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </Link>
             </div>
           </div>
         )}
 
         {/* PRESTAMOS */}
         {junta.estado === 'activa' && (
-          <div className="bg-white dark:bg-slate-900 border border-border rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-muted-foreground" />
-                <h2 className="font-bold text-sm text-foreground">Préstamos del Grupo</h2>
-              </div>
-              <Link
-                href={`/prestamos/nuevo?junta=${juntaId}`}
-                className="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition"
-              >
-                + Prestar
-              </Link>
+          <div className="bg-white border border-border rounded-2xl overflow-hidden shadow-premium">
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-slate-50">
+              <h2 className="font-black text-[10px] text-slate-400 uppercase tracking-[0.2em]">Préstamos del Grupo</h2>
             </div>
-            <div className="p-5">
-              <p className="text-sm text-muted-foreground mb-3">
-                Otorga un préstamo a un miembro de este grupo. Las cuotas se cobrarán automáticamente desde la semana siguiente al préstamo.
-              </p>
+            <div className="p-6">
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <p className="text-[9px] text-slate-400 font-black uppercase mb-1">Totales</p>
+                  <p className="text-xl font-black text-foreground">{countPrestamosTotales}</p>
+                </div>
+                <div className="text-center p-3 bg-rose-50 rounded-xl border border-rose-100">
+                  <p className="text-[9px] text-rose-400 font-black uppercase mb-1">En Curso</p>
+                  <p className="text-xl font-black text-rose-600">{countPrestamosPendientes}</p>
+                </div>
+                <div className="text-center p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                  <p className="text-[9px] text-emerald-400 font-black uppercase mb-1">Pagados</p>
+                  <p className="text-xl font-black text-emerald-600">{countPrestamosPagados}</p>
+                </div>
+              </div>
+
               <Link
-                href={`/prestamos`}
-                className="text-primary text-sm font-medium hover:underline"
+                href={`/juntas/${juntaId}/prestamos`}
+                className="w-full py-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-indigo-600 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
-                Ver todas las cuotas y saldos →
+                Ver lista de préstamos <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
