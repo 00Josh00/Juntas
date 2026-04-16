@@ -9,6 +9,13 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Gestión de Juntas | Ahorro y Préstamos",
   description: "Plataforma premium para la administración de juntas de dinero y préstamos grupales.",
+  manifest: "/manifest.json",
+  themeColor: "#3b82f6",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Juntas",
+  },
 };
 
 export default function RootLayout({
