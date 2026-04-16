@@ -171,6 +171,31 @@ export default async function DetalleJuntaPage({ params }: { params: Promise<{ i
             </h2>
             <SemanasCarousel semanas={semanas} juntaId={juntaId} />
           </div>
+
+          {/* GESTIÓN DE PRÉSTAMOS */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-8 border border-border shadow-sm">
+            <div className="flex justify-between items-center flex-wrap gap-4 mb-6">
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <Wallet className="text-primary" />
+                Préstamos de este Grupo
+              </h2>
+              <Link href={`/prestamos/nuevo?junta=${juntaId}`} className="px-5 py-2.5 bg-blue-100 hover:bg-blue-200 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 font-bold rounded-xl transition flex items-center gap-2 text-sm">
+                + Otorgar Préstamo
+              </Link>
+            </div>
+            
+            {(() => {
+                // Render loans locally using the component logic
+                return (
+                  <div>
+                    <p className="text-muted-foreground text-sm mb-4">Los préstamos emitidos aquí programarán sus cuotas para que se cobren durante las semanas de esta misma junta.</p>
+                    <Link href={`/prestamos`} className="text-primary font-medium hover:underline flex items-center gap-1 text-sm mt-4">
+                       Ir al Panel Completo de Préstamos para ver estado de cuotas &rarr;
+                    </Link>
+                  </div>
+                )
+            })()}
+          </div>
         </div>
       )}
 

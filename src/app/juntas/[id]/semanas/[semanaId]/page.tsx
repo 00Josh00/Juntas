@@ -34,6 +34,30 @@ export default async function SemanaPage({ params }: { params: Promise<{ id: str
 
   const pagos = (pagosRaw || []) as PagoSemanal[]
 
+  // Info Cuotas Activas
+  const { data: prestamosData } = await supabase
+    .from('prestamos')
+    .select('id, participante_id, cuotas_prestamo (id, monto_cuota, estado, numero_cuota)')
+    .eq('junta_id', juntaId)
+    .in('estado', ['activo', 'pagado_parcial'])
+
+  const cuotasMap = new Map<number, { id: number, monto: number, num: number }>()
+  
+  if (prestamosData) {
+     prestamosData.forEach(p => {
+        const pd = p.cuotas_prestamo?.filter((c: any) => c.estado === 'pendiente') || []
+        pd.sort((a: any, b: any) => a.numero_cuota - b.numero_cuota)
+        if (pd.length > 0) {
+           cuotasMap.set(p.participante_id, {
+             id: pd[0].id,
+             monto: Number(pd[0].monto_cuota),
+             num: pd[0].numero_cuota
+           })
+        }
+     })
+  }
+
+
   // Action Component for Generating Payments list if empty
   const handleGenerarCaja = async () => {
     'use server'
@@ -130,12 +154,23 @@ export default async function SemanaPage({ params }: { params: Promise<{ id: str
             </form>
           </div>
           <div className="md:hidden divide-y divide-border">
-            {pagos.map(pago => (
+            {pagos.map(pago => {
+              const cuota = cuotasMap.get(pago.participante_id);
+              const isPendiente = pago.estado !== 'pagado';
+              const cuotaMonto = (isPendiente && cuota) ? cuota.monto : 0;
+              const totalAbsoluto = Number(pago.monto_esperado) + cuotaMonto;
+
+              return (
               <div key={`mob-${pago.id}`} className={`p-5 transition-colors ${pago.estado === 'pagado' ? 'bg-green-50/50 dark:bg-green-900/10' : 'hover:bg-muted/10'}`}>
                 <div className="flex justify-between items-start mb-4">
                   <div>
                      <div className="font-bold text-base text-foreground leading-tight">{pago.participantes?.nombre} {pago.participantes?.apellido}</div>
                      <div className="text-xs text-secondary font-medium mt-1">Opciones tomadas: {pago.opciones_cantidad}</div>
+                     {isPendiente && cuota && (
+                        <div className="text-[10px] text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 font-bold px-2 py-0.5 rounded mt-2 inline-block">
+                           + Cuota {cuota.num} Préstamo (S/ {cuota.monto.toFixed(2)})
+                        </div>
+                     )}
                   </div>
                   <div>
                     {pago.estado === 'pagado' ? (
@@ -151,15 +186,15 @@ export default async function SemanaPage({ params }: { params: Promise<{ id: str
                 </div>
                 <div className="flex justify-between items-end gap-4 bg-background p-3 rounded-xl border border-border/50">
                   <div>
-                    <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Monto Sugerido</div>
-                    <div className="font-extrabold text-xl text-primary">S/ {Number(pago.monto_esperado).toFixed(2)}</div>
+                    <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Total a Cobrar</div>
+                    <div className="font-extrabold text-xl text-primary">S/ {totalAbsoluto.toFixed(2)}</div>
                   </div>
                   <div>
-                    <BotonManejarPago pagoId={pago.id} montoEsperado={pago.monto_esperado} estado={pago.estado} juntaId={juntaId} semanaId={semanaId} />
+                    <BotonManejarPago pagoId={pago.id} montoEsperado={Number(pago.monto_esperado)} estado={pago.estado} juntaId={juntaId} semanaId={semanaId} cuotaId={isPendiente && cuota ? cuota.id : undefined} cuotaMonto={cuotaMonto} />
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
 
           <div className="hidden md:block overflow-x-auto">
@@ -174,11 +209,24 @@ export default async function SemanaPage({ params }: { params: Promise<{ id: str
                  </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {pagos.map(pago => (
+                {pagos.map(pago => {
+                  const cuota = cuotasMap.get(pago.participante_id);
+                  const isPendiente = pago.estado !== 'pagado';
+                  const cuotaMonto = (isPendiente && cuota) ? cuota.monto : 0;
+                  const totalAbsoluto = Number(pago.monto_esperado) + cuotaMonto;
+
+                  return (
                   <tr key={pago.id} className={`transition-colors ${pago.estado === 'pagado' ? 'bg-green-50/30' : 'hover:bg-muted/20'}`}>
-                    <td className="p-5 font-medium">{pago.participantes?.nombre} {pago.participantes?.apellido}</td>
+                    <td className="p-5 font-medium">
+                        {pago.participantes?.nombre} {pago.participantes?.apellido}
+                        {isPendiente && cuota && (
+                           <div className="text-[10px] text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 font-bold px-2 py-0.5 rounded mt-2 inline-table">
+                              + Cuota de Prestamo (S/ {cuota.monto.toFixed(2)})
+                           </div>
+                        )}
+                    </td>
                     <td className="p-5 text-center font-mono">{pago.opciones_cantidad}</td>
-                    <td className="p-5 text-right font-bold text-lg">S/ {Number(pago.monto_esperado).toFixed(2)}</td>
+                    <td className="p-5 text-right font-bold text-lg">S/ {totalAbsoluto.toFixed(2)}</td>
                     <td className="p-5 text-center">
                        {pago.estado === 'pagado' ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">
@@ -191,10 +239,10 @@ export default async function SemanaPage({ params }: { params: Promise<{ id: str
                        )}
                     </td>
                     <td className="p-5">
-                       <BotonManejarPago pagoId={pago.id} montoEsperado={pago.monto_esperado} estado={pago.estado} juntaId={juntaId} semanaId={semanaId} />
+                       <BotonManejarPago pagoId={pago.id} montoEsperado={Number(pago.monto_esperado)} estado={pago.estado} juntaId={juntaId} semanaId={semanaId} cuotaId={isPendiente && cuota ? cuota.id : undefined} cuotaMonto={cuotaMonto} />
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
