@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { CalendarDays, Settings, Play, CheckCircle2, XCircle, Users, AlertCircle } from 'lucide-react'
 import { Junta, Participante, OpcionParticipante, SemanaJunta } from '@/types/database'
 import { AccionesConfiguracion } from '@/app/juntas/[id]/AccionesConfiguracion'
+import { SemanasCarousel } from '@/app/juntas/[id]/SemanasCarousel'
 import { notFound } from 'next/navigation'
 
 const EstadoBadge = ({ estado }: { estado: string }) => {
@@ -120,23 +121,7 @@ export default async function DetalleJuntaPage({ params }: { params: Promise<{ i
             Progreso Semanal
           </h2>
           
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-             {semanas.map((sem) => (
-  <Link key={sem.id} href={`/juntas/${juntaId}/semanas/${sem.id}`}>
-    <div className={`p-4 rounded-2xl border transition-all h-full ${sem.cerrada ? 'bg-muted/50 border-border hover:bg-muted/70' : 'bg-primary/5 border-primary/20 hover:border-primary cursor-pointer'}`}>
-        <div className="text-sm font-semibold text-muted-foreground mb-1">S{sem.numero_semana}</div>
-        <div className="font-medium">
-          {sem.fecha_semana ? new Date(sem.fecha_semana).toLocaleDateString() : 'Por definir'}
-        </div>
-        {sem.cerrada ? (
-          <span className="text-xs text-green-600 font-medium inline-block mt-2">Cerrada</span>
-        ) : (
-          <span className="text-xs text-primary font-medium inline-block mt-2">En curso</span>
-        )}
-    </div>
-  </Link>
-))}
-          </div>
+          <SemanasCarousel semanas={semanas} juntaId={juntaId} />
         </div>
       )}
 

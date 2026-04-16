@@ -40,11 +40,41 @@ export default async function SemanaPage({ params }: { params: Promise<{ id: str
     await generarPagos(semanaId, juntaId)
   }
 
+  // Navegación rápida entre semanas
+  const { data: prevSemanaRaw } = await supabase
+    .from('semanas_junta')
+    .select('id')
+    .eq('junta_id', juntaId)
+    .eq('numero_semana', semana.numero_semana - 1)
+    .single()
+
+  const { data: nextSemanaRaw } = await supabase
+    .from('semanas_junta')
+    .select('id')
+    .eq('junta_id', juntaId)
+    .eq('numero_semana', semana.numero_semana + 1)
+    .single()
+
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8">
       {/* HEADER */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-8 border border-border shadow-sm">
-        <Link href={`/juntas/${juntaId}`} className="text-primary hover:underline text-sm font-medium mb-4 sm:mb-6 inline-block">&larr; Volver a Panel de la Junta</Link>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
+          <Link href={`/juntas/${juntaId}`} className="text-primary hover:underline text-sm font-medium inline-block">&larr; Volver a Panel de la Junta</Link>
+          
+          <div className="flex items-center gap-3">
+             {prevSemanaRaw && (
+               <Link href={`/juntas/${juntaId}/semanas/${prevSemanaRaw.id}`} className="px-3 py-1.5 text-xs font-medium border border-border rounded-lg hover:bg-muted transition-colors">
+                  &lt; Ant
+               </Link>
+             )}
+             {nextSemanaRaw && (
+               <Link href={`/juntas/${juntaId}/semanas/${nextSemanaRaw.id}`} className="px-3 py-1.5 text-xs font-medium border border-border rounded-lg hover:bg-muted transition-colors">
+                  Sig &gt;
+               </Link>
+             )}
+          </div>
+        </div>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground flex items-center gap-2 sm:gap-3">
