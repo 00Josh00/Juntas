@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
-import { CalendarDays, Settings, Play, CheckCircle2, XCircle, Users, AlertCircle, Wallet, ArrowLeft, TrendingUp, DollarSign } from 'lucide-react'
+import { CalendarDays, Settings, Play, CheckCircle2, XCircle, Users, AlertCircle, Wallet, ArrowLeft, TrendingUp, DollarSign, ChevronRight } from 'lucide-react'
+
 import { Junta, Participante, OpcionParticipante, SemanaJunta } from '@/types/database'
 import { AccionesConfiguracion } from '@/app/juntas/[id]/AccionesConfiguracion'
 import { SemanasCarousel } from '@/app/juntas/[id]/SemanasCarousel'
@@ -67,9 +68,10 @@ export default async function DetalleJuntaPage({ params }: { params: Promise<{ i
     totalPrestamos = prestamosData?.reduce((a, b) => a + Number(b.monto_principal), 0) || 0
 
     const { data: cuotasData } = await supabase
-      .from('pagos_cuotas')
+      .from('cuotas_prestamo')
       .select('monto_pagado, prestamos!inner(junta_id)')
       .eq('prestamos.junta_id', juntaId)
+      .eq('estado', 'pagada')
     totalRecuperado = cuotasData?.reduce((a, b) => a + Number(b.monto_pagado), 0) || 0
   }
 
@@ -108,7 +110,20 @@ export default async function DetalleJuntaPage({ params }: { params: Promise<{ i
                 </div>
                 <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-1">Caja en Efectivo</p>
                 <p className="text-4xl font-extrabold tracking-tight">S/ {cajaReal.toFixed(2)}</p>
-                <p className="text-blue-200/70 text-xs mt-2">Recaudado – Préstamos + Cuotas cobradas</p>
+                <div className="flex gap-4 mt-3 pt-3 border-t border-blue-800/40">
+                  <div>
+                    <p className="text-blue-300 text-[10px] uppercase font-bold">Cobrado</p>
+                    <p className="text-blue-100 font-bold text-sm">S/ {cajaEfectivo.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-blue-300 text-[10px] uppercase font-bold">Prestado</p>
+                    <p className="text-blue-100 font-bold text-sm">S/ {totalPrestamos.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-blue-300 text-[10px] uppercase font-bold">Recuperado</p>
+                    <p className="text-blue-100 font-bold text-sm">S/ {totalRecuperado.toFixed(2)}</p>
+                  </div>
+                </div>
               </div>
 
               {/* SEMANA ACTUAL */}
@@ -178,34 +193,25 @@ export default async function DetalleJuntaPage({ params }: { params: Promise<{ i
           />
         )}
 
-        {/* PARTICIPANTES DEL GRUPO (solo activa) */}
+        {/* PARTICIPANTES DEL GRUPO - CARD RESUMEN (solo activa) */}
         {junta.estado === 'activa' && opciones.length > 0 && (
-          <div className="bg-white dark:bg-slate-900 border border-border rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-border flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <h2 className="font-bold text-sm text-foreground">Integrantes ({opciones.length})</h2>
-            </div>
-            <div className="divide-y divide-border">
-              {opciones.map(opc => (
-                <div key={opc.id} className="px-5 py-3 flex justify-between items-center">
-                  <div>
-                    <p className="font-semibold text-sm text-foreground">
-                      {opc.participantes?.nombre} {opc.participantes?.apellido}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {opc.cantidad_opciones} opción{opc.cantidad_opciones > 1 ? 'es' : ''} · S/ {(opc.cantidad_opciones * junta.monto_por_opcion).toFixed(2)}/sem
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg">
-                      x{opc.cantidad_opciones}
-                    </span>
-                  </div>
+          <Link href={`/juntas/${juntaId}/participantes`} className="block">
+            <div className="bg-white dark:bg-slate-900 border border-border rounded-2xl p-4 flex items-center justify-between hover:border-primary hover:shadow-sm transition-all active:scale-[0.99]">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 bg-primary/10 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <Users className="h-6 w-6 text-primary" />
                 </div>
-              ))}
+                <div>
+                  <p className="font-bold text-foreground text-base">{opciones.length} Integrante{opciones.length > 1 ? 's' : ''}</p>
+                  <p className="text-xs text-muted-foreground">{totalOpciones} opciones · S/ {montoBolsaSemanal.toFixed(2)}/sem</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0" />
             </div>
-          </div>
+          </Link>
         )}
+
+
 
         {/* SEMANAS */}
         {junta.estado === 'activa' && semanas.length > 0 && (

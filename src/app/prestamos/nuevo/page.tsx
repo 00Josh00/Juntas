@@ -20,12 +20,12 @@ export default async function NuevoPrestamoPage({
     .select('id, nombre')
     .eq('estado', 'activa')
 
-  // Si viene una junta prefiltrada, sólo mostrar participantes de esa junta (fix de seguridad)
+  // Si viene una junta prefiltrada, sólo mostrar participantes de esa junta 
   let participantes: { id: number; nombre: string; apellido: string }[] = []
-  let semanas: { id: number; numero_semana: number }[] = []
+  let semanaActualId: number | null = null
 
   if (prefilledJuntaId) {
-    // Participantes SOLO de esa junta (están en opciones_participante)
+    // 1. Participantes de esa junta
     const { data: opciones } = await supabase
       .from('opciones_participante')
       .select('participante_id, participantes(id, nombre, apellido)')
@@ -36,14 +36,15 @@ export default async function NuevoPrestamoPage({
       o.participantes ? [(o.participantes as unknown) as { id: number; nombre: string; apellido: string }] : []
     )
 
-    // Semanas de esa junta (para seleccionar en cuál semana empieza el préstamo)
+    // 2. Determinar la semana de emisión AUTOMÁTICA (la actual abierta)
     const { data: semanasRaw } = await supabase
       .from('semanas_junta')
-      .select('id, numero_semana')
+      .select('id, numero_semana, cerrada')
       .eq('junta_id', prefilledJuntaId)
       .order('numero_semana', { ascending: true })
 
-    semanas = (semanasRaw || []).map(s => ({ id: s.id, numero_semana: s.numero_semana }))
+    const actual = (semanasRaw || []).find(s => !s.cerrada) || (semanasRaw || [])[(semanasRaw?.length || 1) - 1]
+    semanaActualId = actual?.id || null
   } else {
     // Si no hay junta prefiltrada, mostrar todos los participantes activos
     const { data } = await supabase
@@ -89,9 +90,6 @@ export default async function NuevoPrestamoPage({
                   <option key={j.id} value={j.id}>{j.nombre}</option>
                 ))}
               </select>
-              {!juntas?.length && (
-                <p className="text-xs text-destructive mt-1">No hay juntas activas disponibles.</p>
-              )}
             </div>
 
             {/* PARTICIPANTE */}
@@ -109,40 +107,25 @@ export default async function NuevoPrestamoPage({
                   <option key={p.id} value={p.id}>{p.nombre} {p.apellido}</option>
                 ))}
               </select>
-              {prefilledJuntaId && !participantes.length && (
-                <p className="text-xs text-destructive mt-1">
-                  Esta junta no tiene participantes registrados.
-                </p>
-              )}
             </div>
 
-            {/* SEMANA DE EMISION */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-foreground block">
-                Semana de Emisión <span className="text-destructive">*</span>
-              </label>
-              {prefilledJuntaId && semanas.length > 0 ? (
-                <select
-                  name="semana_inicio_id"
-                  required
-                  className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
-                >
-                  <option value="">— Semana actual —</option>
-                  {semanas.map(s => (
-                    <option key={s.id} value={s.id}>Semana {s.numero_semana}</option>
-                  ))}
-                </select>
-              ) : (
+            {/* SEMANA DE EMISION (HIDDEN / AUTOMATIC) */}
+            {semanaActualId ? (
+              <input type="hidden" name="semana_inicio_id" value={semanaActualId} />
+            ) : (
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-foreground block">
+                  Semana de Emisión (Manual) <span className="text-destructive">*</span>
+                </label>
                 <input
                   type="number"
                   name="semana_inicio_id"
                   required
-                  placeholder="ID de semana_junta"
+                  placeholder="ID de semana"
                   className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
-              )}
-              <p className="text-xs text-muted-foreground">La primera cuota se cobrará en la semana siguiente.</p>
-            </div>
+              </div>
+            )}
 
             {/* MONTO */}
             <div className="space-y-1.5">
@@ -208,7 +191,7 @@ export default async function NuevoPrestamoPage({
         </div>
 
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 text-sm text-amber-800 dark:text-amber-300">
-          <strong>Regla:</strong> La primera cuota del préstamo se programará automáticamente para la semana <em>siguiente</em> a la semana de emisión seleccionada.
+          <strong>Regla Automatizada:</strong> El préstamo se emite en la semana actual y la primera cuota se cobrará <u>la semana siguiente</u> de forma automática.
         </div>
       </div>
     </div>

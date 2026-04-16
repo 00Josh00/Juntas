@@ -33,7 +33,7 @@ export async function addPrestamo(formData: FormData) {
   redirect('/prestamos')
 }
 
-export async function registrarCuota(cuotaId: number, montoPagado: number) {
+export async function registrarCuota(cuotaId: number, montoPagado: number, semanaId?: number) {
   const supabase = await createClient()
 
   // Llama a la funcion de la BD pagar_cuota
@@ -41,6 +41,14 @@ export async function registrarCuota(cuotaId: number, montoPagado: number) {
     p_cuota_id: cuotaId,
     p_monto_pagado: montoPagado
   })
+
+  // Vincular la cuota cobrada a esta semana específica para reportes detallados
+  if (!error && semanaId) {
+    await supabase
+      .from('cuotas_prestamo')
+      .update({ semana_junta_id: semanaId })
+      .eq('id', cuotaId)
+  }
 
   if (error) console.error('Error pagando cuota:', error)
 

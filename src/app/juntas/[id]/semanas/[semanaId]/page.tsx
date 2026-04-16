@@ -26,20 +26,31 @@ export default async function SemanaPage({ params }: { params: Promise<{ id: str
     .eq('semana_junta_id', semanaId)
   const pagos = (pagosRaw || []) as PagoSemanal[]
 
-  // Cuotas activas de préstamos de esta junta
+  // Cuotas (pendientes para cobrar + pagadas vinculadas a esta semana)
   const { data: prestamosData } = await supabase
     .from('prestamos')
-    .select('id, participante_id, cuotas_prestamo (id, monto_cuota, estado, numero_cuota)')
+    .select('id, participante_id, cuotas_prestamo (id, monto_cuota, monto_pagado, estado, numero_cuota, semana_junta_id)')
     .eq('junta_id', juntaId)
-    .in('estado', ['activo', 'pagado_parcial'])
 
   const cuotasMap = new Map<number, { id: number, monto: number, num: number }>()
+  const cuotasPagadasMap = new Map<number, { monto: number, num: number }>()
+
   if (prestamosData) {
     prestamosData.forEach(p => {
-      const pd = (p.cuotas_prestamo as any[])?.filter(c => c.estado === 'pendiente') || []
-      pd.sort((a: any, b: any) => a.numero_cuota - b.numero_cuota)
-      if (pd.length > 0) {
-        cuotasMap.set(p.participante_id, { id: pd[0].id, monto: Number(pd[0].monto_cuota), num: pd[0].numero_cuota })
+      // 1. Encontrar la cuota PENDIENTE más antigua (para el botón de cobrar)
+      const pendientes = (p.cuotas_prestamo as any[])?.filter(c => c.estado === 'pendiente') || []
+      pendientes.sort((a, b) => a.numero_cuota - b.numero_cuota)
+      if (pendientes.length > 0) {
+        cuotasMap.set(p.participante_id, { id: pendientes[0].id, monto: Number(pendientes[0].monto_cuota), num: pendientes[0].numero_cuota })
+      }
+
+      // 2. Encontrar cuotas PAGADAS en esta semana específica (para mostrar el histórico en la tarjeta)
+      const pagadasEstaSemana = (p.cuotas_prestamo as any[])?.filter(c => c.estado === 'pagada' && c.semana_junta_id === semanaId) || []
+      if (pagadasEstaSemana.length > 0) {
+        cuotasPagadasMap.set(p.participante_id, { 
+          monto: pagadasEstaSemana.reduce((sum, c) => sum + Number(c.monto_pagado), 0),
+          num: pagadasEstaSemana[0].numero_cuota 
+        })
       }
     })
   }
@@ -154,10 +165,19 @@ export default async function SemanaPage({ params }: { params: Promise<{ id: str
 
             <div className="divide-y divide-border">
               {pagos.map(pago => {
-                const cuota = cuotasMap.get(pago.participante_id)
+                const cuotaPendiente = cuotasMap.get(pago.participante_id)
+                const cuotaYaPagada = cuotasPagadasMap.get(pago.participante_id)
+                
                 const isPendiente = pago.estado !== 'pagado'
-                const cuotaMonto = isPendiente && cuota ? cuota.monto : 0
-                const totalAbsoluto = Number(pago.monto_esperado) + cuotaMonto
+                // Si está pendiente, mostramos lo esperado (opción + cuota pendiente si hay)
+                // Si está pagado, mostramos lo cobrado (monto_pagado + cuota ya pagada si hay)
+                const cuotaMonto = isPendiente 
+                  ? (cuotaPendiente ? cuotaPendiente.monto : 0)
+                  : (cuotaYaPagada ? cuotaYaPagada.monto : 0)
+                
+                const totalAbsoluto = isPendiente
+                  ? Number(pago.monto_esperado) + cuotaMonto
+                  : Number(pago.monto_pagado) + cuotaMonto
 
                 return (
                   <div
@@ -173,9 +193,16 @@ export default async function SemanaPage({ params }: { params: Promise<{ id: str
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {pago.opciones_cantidad} opción{pago.opciones_cantidad > 1 ? 'es' : ''}
                         </p>
-                        {isPendiente && cuota && (
+                        
+                        {/* Indicador de cuota de préstamo */}
+                        {isPendiente && cuotaPendiente && (
                           <span className="inline-block text-[10px] bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 font-bold px-2 py-0.5 rounded mt-1">
-                            + Cuota {cuota.num} préstamo (S/{cuota.monto.toFixed(2)})
+                            + Cuota {cuotaPendiente.num} préstamo (S/{cuotaPendiente.monto.toFixed(2)})
+                          </span>
+                        )}
+                        {!isPendiente && cuotaYaPagada && (
+                          <span className="inline-block text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold px-2 py-0.5 rounded mt-1">
+                            ✓ Incluye Cuota {cuotaYaPagada.num} préstamo
                           </span>
                         )}
                       </div>
@@ -202,7 +229,7 @@ export default async function SemanaPage({ params }: { params: Promise<{ id: str
                         estado={pago.estado}
                         juntaId={juntaId}
                         semanaId={semanaId}
-                        cuotaId={isPendiente && cuota ? cuota.id : undefined}
+                        cuotaId={isPendiente && cuotaPendiente ? cuotaPendiente.id : undefined}
                         cuotaMonto={cuotaMonto || undefined}
                       />
                     </div>

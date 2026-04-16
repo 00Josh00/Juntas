@@ -37,7 +37,7 @@ export function BotonManejarPago({
       await registrarPago(pagoId, montoEsperado, juntaId, semanaId)
       // Si tiene cuota activa asociada, la pagamos en la misma transacción virtual
       if (cuotaId && cuotaMonto) {
-         await registrarCuota(cuotaId, cuotaMonto)
+         await registrarCuota(cuotaId, cuotaMonto, semanaId)
       }
     }
     setLoading(false)
